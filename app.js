@@ -8,7 +8,7 @@ const config = require('config');
 const PORT = config.get("serverPort");
 const DATABASE_URL = config.get("databaseURL")
 
-const authRouter = require('./routes/auth.routes');
+const authRouter = require('./routes/auth');
 const cors = require('./middlewares/cors');
 
 
