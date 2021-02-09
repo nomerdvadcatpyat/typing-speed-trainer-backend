@@ -1,20 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/user');
-const {check, validationResult, body} = require('express-validator');
-const validateRegistration = require('../middlewares/auth/validateRegistration');
+const validateRegistrationMiddleware = require('../middlewares/auth/validateRegistration');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('config'); 
-const authMiddleWare = require('../middlewares/auth/verifyJWT');
+const verifyJWTMiddleware = require('../middlewares/auth/verifyJWT');
 
-router.post('/registration', validateRegistration,
+router.post('/registration', validateRegistrationMiddleware,
  async (req, res) => {
   try {
-    if(req.errors) {
-      console.log(req.errors);
-      return res.status(400).json(req.errors);
-    }
 
     const {email, password} = req.body;
 
@@ -22,7 +17,7 @@ router.post('/registration', validateRegistration,
 
     if(candidate) {
       console.log('is candidate', candidate);
-      return res.status(400).json({message: `User with email ${email} already exist.`});
+      return res.status(400).json({error: `User with email ${email} already exist.`});
     }
 
     const hashPassword = await bcrypt.hash(password, 4);
@@ -58,12 +53,12 @@ router.post('/login',
 
     const user = await User.findOne({email});
     if (!user) {
-      return res.status(404).json({message: "User not found"})
+      return res.status(404).json({error: "User not found"})
     }
 
     const isPassValid = bcrypt.compareSync(password, user.password);
     if(!isPassValid) {
-      return res.status(400).json({message: "Password not valid"}); 
+      return res.status(400).json({error: "Password not valid"}); 
     }
     const token = jwt.sign({id: user._id}, config.get('secretKey'), {expiresIn: "1h"});
 
@@ -85,7 +80,7 @@ router.post('/login',
 
 
 
-router.get('/auth', authMiddleWare,
+router.get('/auth', verifyJWTMiddleware,
  async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
