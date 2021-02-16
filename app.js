@@ -5,12 +5,15 @@ const logger = require('morgan');
 const mongoose = require('mongoose');
 const config = require('config');
 
-const PORT = config.get("serverPort");
-const DATABASE_URL = config.get("databaseURL")
+
+const DATABASE_URL = config.get("databaseURL");
+mongoose.connect(DATABASE_URL);
+mongoose.Promise = global.Promise;
 
 const authRouter = require('./routes/auth');
-const cors = require('./middlewares/cors');
+const trainingSpeedRouter = require('./routes/trainingSpeed');
 
+const cors = require('./middlewares/cors');
 
 const app = express();
 
@@ -22,19 +25,10 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api/auth', authRouter);
+app.use('/api/trainingSpeed', trainingSpeedRouter);
 
-(async () => {
-  try {
-    await mongoose.connect(DATABASE_URL);
-    mongoose.Promise = global.Promise;
 
-    app.listen(PORT, () => {
-      console.log(`server start on ${PORT}`)
-    });
-  }
-  catch (e) {
-    console.log(e);
-  }
-})();
+
+module.exports = app;
 
 

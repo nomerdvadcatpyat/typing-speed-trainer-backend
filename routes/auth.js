@@ -10,18 +10,14 @@ const verifyJWTMiddleware = require('../middlewares/auth/verifyJWT');
 router.post('/registration', validateRegistrationMiddleware,
  async (req, res) => {
   try {
-
     const {email, password} = req.body;
-
     const candidate = await User.findOne({email})
-
     if(candidate) {
       console.log('is candidate', candidate);
       return res.status(400).json({error: `User with email ${email} already exist.`});
     }
 
     const hashPassword = await bcrypt.hash(password, 4);
-
     const user = await User.create({email, password: hashPassword});
     const token = jwt.sign({id: user._id}, config.get('secretKey'), {expiresIn: "1h"});
 
@@ -92,7 +88,7 @@ router.get('/auth', verifyJWTMiddleware,
         email: user.email,
       }
     });
-
+    
   } catch (e) {
     console.log(e)
     res.send({message: 'Server Error'})
