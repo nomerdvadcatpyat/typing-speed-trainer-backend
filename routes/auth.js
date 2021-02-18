@@ -10,9 +10,7 @@ const verifyJWTMiddleware = require('../middlewares/auth/verifyJWT');
 router.post('/registration', validateRegistrationMiddleware,
  async (req, res) => {
   try {
-
     const {email, password} = req.body;
-
     const candidate = await User.findOne({email})
 
     if(candidate) {
@@ -92,7 +90,6 @@ router.get('/auth', verifyJWTMiddleware,
         email: user.email,
       }
     });
-
   } catch (e) {
     console.log(e)
     res.send({message: 'Server Error'})

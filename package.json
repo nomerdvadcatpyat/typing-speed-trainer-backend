@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js"
+    "start": "node bin/www",
+    "dev": "nodemon bin/www"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -16,6 +16,7 @@
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.11.15",
     "morgan": "~1.9.1",
+    "socket.io": "^3.1.1",
     "yup": "^0.32.8"
   },
   "devDependencies": {
