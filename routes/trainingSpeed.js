@@ -18,9 +18,16 @@ router.get('/selectTextPageData', async (req, res) => {
   });
 });
 
-router.get('/selectTextData', async (req, res) => {
+router.get('/selectedTextData', async (req, res) => {
   console.log(req.query);
 
+  const data = await Text.findOne({ title: req.query.textTitle});
+  console.log('text', data.text.substr(0, +req.query.length));
+  const text = data.text.substr(0, +req.query.length).replace(/\s+/g, ' '); // сделать эту регулярку при загрузке текста
+  console.log('text', text);
+  const keyboardLayout = await Keyboard.findOne({ language: data.language });
+
+  res.json({text, keyboardLayout: keyboardLayout.layout });
 });
 
 router.get('/prepare', async (req, res) => {
