@@ -9,7 +9,7 @@ function connectSocket(httpServer) {
   });
 
   io.on('connection', socket => {
-    console.log(socket);
+    console.log(socket.date);
   });
 }
 

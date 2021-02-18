@@ -15,11 +15,11 @@ mongoose.Promise = global.Promise;
 (
   async () => {
     const admin = await User.findOne({ email: 'admin@admin.com'});
-    console.log(admin);
+    // console.log(admin);
 
-    const en = await Language.create({ name: 'en' });
+    const en = await Language.findOne({ name: 'en' });
 
-    await Keyboard.create({ language: en, layout: engLayout });
+    // await Keyboard.create({ language: en, layout: engLayout });
 
     await Text.create({
       owner: admin,
