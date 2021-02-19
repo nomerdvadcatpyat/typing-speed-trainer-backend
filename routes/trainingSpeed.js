@@ -5,11 +5,11 @@ const User = require('../models/user');
 const Keyboard = require('../models/keyboard');
 const router = express.Router();
 
-const lengths = ['100', '250', '500'];
+const lengths = ['10', '100', '250', '500'];
 
 router.get('/selectTextPageData', async (req, res) => {
   const response = await Text.find();
-  const textTitles = response.map(doc => ({ id: doc._id, title: doc.title }));
+  const textTitles = response.map(doc => doc.title);
   console.log(textTitles);
 
   res.json({
@@ -17,6 +17,7 @@ router.get('/selectTextPageData', async (req, res) => {
     lengths
   });
 });
+
 
 router.get('/selectedTextData', async (req, res) => {
   console.log(req.query);
@@ -30,8 +31,8 @@ router.get('/selectedTextData', async (req, res) => {
   res.json({text, keyboardLayout: keyboardLayout.layout });
 });
 
+
 router.get('/prepare', async (req, res) => {
-  console.log('prepareGet');
   await setTimeout(() => res.json({ ok: true }), 5000);
 });
 
