@@ -1,4 +1,4 @@
-class GroupMember {
+class RoomMember {
   constructor(id) {
     this.id = id;
     this.inputText = '';
@@ -9,4 +9,4 @@ class GroupMember {
   }
 }
 
-module.exports = GroupMember;
+module.exports = RoomMember;
