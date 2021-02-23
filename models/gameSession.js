@@ -2,8 +2,10 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const GameSession = Schema({
-  text: { type: Schema.Types.ObjectId, ref: 'Text' },
+  id: String,
+  textTitle: String,
+  length: Number,
   isSingle: Boolean
 });
 
-module.exports = mongoose.Schema('GameSession', GameSession);
+module.exports = mongoose.model('GameSession', GameSession);
