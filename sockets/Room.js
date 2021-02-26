@@ -1,11 +1,14 @@
 class Room {
-  constructor(id, owner, textTitle, text, isSingle) {
+  constructor(id, owner, textTitle, textLang, text, maxMembers, isSingle) {
     this.id = id;
     this.textTitle = textTitle;
+    this.textLang = textLang;
     this.text = text;
-    this.owner = owner;
+    this.maxMembers = maxMembers;
     this.isSingle = isSingle;
     this.members = [owner];
+
+    this.isRunning = false;
   }
 
   addMember(member) {

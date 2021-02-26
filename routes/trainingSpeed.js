@@ -26,7 +26,7 @@ router.get('/selectedTextData', async (req, res) => {
   console.log('text', text);
   const keyboardLayout = await Keyboard.findOne({ language: data.language });
 
-  res.json({text, textTitle: data.title, keyboardLayout: keyboardLayout.layout });
+  res.json({text, textTitle: data.title, textLang: data.language, keyboardLayout: keyboardLayout.layout });
 });
 
 
