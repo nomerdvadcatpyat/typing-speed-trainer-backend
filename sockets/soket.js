@@ -1,6 +1,6 @@
 const GameSession = require('../models/gameSession');
 const Keyboard = require('../models/keyboard');
-const { getRoom,
+const { getRoom, hasRoom, getRoomForClient,
     setRoom, getValidRooms,
     createRoom, joinToRoom, 
     updateRoom, setNewRoomOwner, 
@@ -27,8 +27,7 @@ function connectSocket(httpServer) {
     
     const updateMembersInWaitingRooms = () => {
       socket.rooms.forEach(roomId => {
-        const room = getRoom(roomId);
-        if(room) io.to(room.id).emit('update room members', room.members);
+        if(hasRoom(roomId)) io.to(roomId).emit('update room members', getRoomForClient(roomId));
       });
     }
 
@@ -51,7 +50,7 @@ function connectSocket(httpServer) {
 
       const error = await joinToRoom({ roomId, userId, socketId: socket.id });
       if(error) 
-        socket.emit('reject join to room', error.message);
+        return socket.emit('reject join to room', error.message);
       
       const room = getRoom(roomId);
       socket.join(room.id);
@@ -105,25 +104,31 @@ function connectSocket(httpServer) {
     socket.on('update time', async ({ roomId,  userId, inputText }) => {
       console.log('update time', roomId, userId, inputText, socket.rooms);
 
-      const {message} = await updateRoom({roomId, userId, inputText});
-
-      if(message === 'end')
-        socket.emit('set end time', member.endTime - member.startTime);  
-      else if(message === 'cheating')
-        socket.emit('kick user'); 
+      const res = await updateRoom({roomId, userId, inputText});
+      if(res) {
+        if(res.message === 'end') {
+          const member = res.member;
+          socket.emit('set end time', member.endTime - member.startTime); 
+        }
+        else if(res.message === 'cheating')
+          socket.emit('kick user'); 
+      }
 
       updateMembersInWaitingRooms();
     });
 
 
     socket.on('request members progress', roomId => {
-      const room = getRoom(roomId);
-      socket.to(roomId).emit('response members progress', room.members);
+      socket.to(roomId).emit('response members progress', getRoomForClient(roomId));
     });
 
   
     socket.on('leave room', ({userId, roomId}) => {
-      leaveRoom({userId, roomId});
+      const newOwner = leaveRoom({userId, roomId});
+      if(newOwner) 
+        io.to(newOwner.socket).emit('set room owner');
+
+      
       updateSearchRooms();
       updateMembersInWaitingRooms();
     });
@@ -141,8 +146,10 @@ function connectSocket(httpServer) {
           room.members = room.members.filter(member => member.socket !== socket.id);
           if(room.members.length === 0) deleteRoom(userRoomId);
           else {
-            if(user.isRoomOwner)
-              setNewRoomOwner(room);
+            if(user.isRoomOwner) {
+              const newOwner = setNewRoomOwner(room);
+              io.to(newOwner.socket).emit('set room owner');
+            }
             setRoom({roomId: userRoomId, data: room});
           }
         }

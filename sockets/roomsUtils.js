@@ -9,6 +9,14 @@ let rooms = new Map();
 
 exports.getRoom = roomId => rooms.get(roomId);
 
+exports.getRoomForClient = roomId => rooms.get(roomId).members.map((member) => ({
+  userName: member.userName,
+  inputText: member.inputText,
+  isRoomOwner: member.isRoomOwner
+}));
+
+exports.hasRoom = roomId => rooms.has(roomId);
+
 exports.setRoom = ({roomId, data}) => rooms.set(roomId, data); 
 
 exports.deleteRoom = roomId => rooms.delete(roomId);
@@ -69,11 +77,14 @@ exports.updateRoom = async ({roomId, userId, inputText}) => {
 
   member.inputText = inputText;
 
-  if(inputText === room.text)
+  if(member.inputText === room.text)
     return await setEndTime({member, room});
 }
 
-exports.setNewRoomOwner = room => room.members[0].isRoomOwner = true;
+exports.setNewRoomOwner = room => {
+  room.members[0].isRoomOwner = true;
+  return room.members[0];
+}
 
 exports.leaveRoom = ({userId, roomId}) => {
   console.log('leave room before', userId, roomId, rooms);
@@ -84,7 +95,7 @@ exports.leaveRoom = ({userId, roomId}) => {
   if(userRoom.members.length === 0) rooms.delete(roomId);
   else {
     if(user.isRoomOwner)
-      setNewRoomOwner(userRoom);
+      return setNewRoomOwner(userRoom);
     rooms.set(roomId, userRoom);
   }
 
@@ -101,7 +112,7 @@ async function setEndTime({member, room}) {
   const points = getPoints(room, member);
   await User.findByIdAndUpdate(user.id, { points: user.points + points });
 
-  return {message: 'end'};
+  return {message: 'end', member};
 }
 
 function isCheating(oldInputText, newInput) {
