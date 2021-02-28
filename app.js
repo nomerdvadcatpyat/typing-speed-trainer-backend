@@ -11,7 +11,8 @@ mongoose.connect(DATABASE_URL);
 mongoose.Promise = global.Promise;
 
 const authRouter = require('./routes/auth');
-const trainingSpeedRouter = require('./routes/trainingSpeed');
+const roomRouter = require('./routes/room');
+const ratingRouter = require('./routes/rating');
 
 const cors = require('./middlewares/cors');
 
@@ -25,7 +26,8 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api/auth', authRouter);
-app.use('/api/trainingSpeed', trainingSpeedRouter);
+app.use('/api/trainingSpeed', roomRouter);
+app.use('/api/rating', ratingRouter);
 
 
 
