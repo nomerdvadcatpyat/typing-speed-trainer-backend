@@ -6,12 +6,12 @@ const LocalStrategy = require('passport-local').Strategy;
 module.exports = function(passport) {
   
   passport.use(new LocalStrategy({
-    usernameField: 'email',
+    usernameField: 'login',
     passwordField: 'password'
   },
-  (email, password, done) => {
-    console.log(email, password);
-    User.findOne({ email: email }, (err, user) => {
+  (login, password, done) => {
+    console.log(login, password);
+    User.findOne({ login: login }, (err, user) => {
       if(err) throw err;
       if(!user) return done(null, false);
       bcrypt.compare(password, user.password, (err, result) => {
@@ -34,7 +34,7 @@ module.exports = function(passport) {
     User.findOne({ _id: id }, (err, user) => {
       const userInformation = {
         id: user._id,
-        email: user.email
+        login: user.login
       }
 
       cb(err, userInformation);

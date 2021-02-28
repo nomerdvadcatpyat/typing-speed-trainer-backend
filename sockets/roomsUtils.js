@@ -20,7 +20,7 @@ exports.getValidRooms = () => [...rooms.values()].filter(room => !(room.isSingle
 
 exports.createRoom = async data => {
   const ownerInDb = await User.findById(data.userId);
-  const owner = new RoomMember(data.userId, data.socketId, ownerInDb.email);
+  const owner = new RoomMember(data.userId, data.socketId, ownerInDb.login);
   owner.isRoomOwner = true;
   const roomId = uuidv4();
   const newRoom = new Room(roomId, owner, data.textTitle, data.textLang, data.text, data.usersCount, data.usersCount === 1);
@@ -48,7 +48,7 @@ exports.joinToRoom = async ({roomId, userId, socketId}) => {
   if(error) 
     return error;
 
-  room.members.push(new RoomMember(userId, socketId, userInDb.email));
+  room.members.push(new RoomMember(userId, socketId, userInDb.login));
   rooms.set(room.id, room);
 }
 
