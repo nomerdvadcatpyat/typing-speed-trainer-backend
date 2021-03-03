@@ -1,9 +1,9 @@
+require('dotenv').config()
 const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const mongoose = require('mongoose');
-const config = require('config');
 const session = require('express-session');
 const MongoStore = require('connect-mongo').default;
 
@@ -17,7 +17,7 @@ const passport = require('passport');
 
 const app = express();
 
-const DATABASE_URL = config.get("databaseURL");
+const DATABASE_URL = process.env.DATABASE_URL;
 mongoose.connect(DATABASE_URL, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -31,15 +31,15 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser(config.get('SESSION_SECRET'))); 
+app.use(cookieParser(process.env.SESSION_SECRET)); 
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(
   session({
-    secret: config.get('SESSION_SECRET'),
+    secret: process.env.SESSION_SECRET,
     resave: true,
     saveUninitialized: true,
-    store: MongoStore.create({ mongoUrl: config.get("databaseURL") })
+    store: MongoStore.create({ mongoUrl: process.env.DATABASE_URL })
   })  
 );
 
