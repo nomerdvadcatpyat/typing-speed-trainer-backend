@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const config = require('config');
 const User = require('./models/user');
 const Text = require('./models/text');
 const Language = require('./models/language');
@@ -7,7 +6,7 @@ const Keyboard = require('./models/keyboard');
 
 const engLayout = require('./utils/keyboardLayouts').en;
 
-const DATABASE_URL = config.get("databaseURL");
+const DATABASE_URL = process.env.DATABASE_URL;
 mongoose.connect(DATABASE_URL);
 mongoose.Promise = global.Promise;
 
