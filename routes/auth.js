@@ -47,7 +47,7 @@ router.post('/login', async (req, res, next) => {
       console.log('user', user);
       if(err) throw err;
       if (!user)
-        return res.status(404).json({error: "User not found"})
+        return res.status(404).json({error: "Wrong login or password"});
       else {
         req.logIn(user, err => {
           if(err) throw err;
