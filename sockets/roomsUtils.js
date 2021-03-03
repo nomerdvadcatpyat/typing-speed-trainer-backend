@@ -107,10 +107,26 @@ async function setEndTime({member, room}) {
   member.endTime = member.lastUpdateTime;
   const gameSession = await GameSession.findOne({ id: room.id });
   const user = await User.findById(member.id);
-  UserTime.create({ gameSession, user, startTime: member.startTime, endTime: member.endTime });
 
-  const points = getPoints(room, member);
-  await User.findByIdAndUpdate(user.id, { points: user.points + points });
+  const {place, points} = getPlace(room, member);
+  const timeDiff = member.endTime - member.startTime;
+  const averageSpeedPerMinute = room.text.length / (timeDiff / (1000 * 60));
+
+  await UserTime.create({ 
+    gameSession,
+     user, 
+     startTime: member.startTime, 
+     endTime: member.endTime, 
+     points: points, 
+     place: place,
+     averageSpeed: averageSpeedPerMinute 
+    });
+
+  await User.findByIdAndUpdate(user.id, { 
+    points: user.points + points, 
+    averageSpeed: (user.averageSpeed + averageSpeedPerMinute) / (user.gamesCount + 1),
+    gamesCount: user.gamesCount + 1
+  });
 
   return {message: 'end', member};
 }
@@ -119,7 +135,7 @@ function isCheating(oldInputText, newInput) {
   newInput.length - oldInputText.length > 12.5 * 4;
 }
 
-function getPoints(room, member) {
+function getPlace(room, member) {
  let place = 1;
  room.members.forEach(otherMember => {
    if(member === otherMember) 
@@ -130,15 +146,15 @@ function getPoints(room, member) {
 
  switch(place) {
    case 1:
-     return 20;
+     return {place, points: 20};
 
    case 2:
-     return 15;
+     return {place, points: 15};
 
    case 3:
-     return 10;
+     return {place, points: 10};    
    
    default:
-     return 5;  
+     return {place, points: 5};  
  }
 }

@@ -13,6 +13,14 @@ const User = new mongoose.Schema({
     points: {
       type: Number,
       default: 0
+    },
+    averageSpeed: {
+      type: Number,
+      default: 0
+    },
+    gamesCount: {
+      type: Number,
+      default: 0
     }
 })
  

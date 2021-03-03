@@ -11,6 +11,7 @@ const MongoStore = require('connect-mongo').default;
 const authRouter = require('./routes/auth');
 const roomRouter = require('./routes/room');
 const ratingRouter = require('./routes/rating');
+const profileRouter = require('./routes/profile');
 const cors = require('cors');
 const passport = require('passport');
 
@@ -51,7 +52,7 @@ require('./passport/passportConfig')(passport);
 app.use('/api/auth', authRouter);
 app.use('/api/trainingSpeed', roomRouter);
 app.use('/api/rating', ratingRouter);
-
+app.use('/api/profile', profileRouter);
 
 
 module.exports = app;
