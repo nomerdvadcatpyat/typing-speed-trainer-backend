@@ -3,7 +3,7 @@ const Keyboard = require('../models/keyboard');
 const { getRoom, hasRoom, getRoomForClient,
     setRoom, getValidRooms,
     createRoom, joinToRoom, 
-    updateRoom, setNewRoomOwner, 
+    updateRoom, setNewRoomOwner, getWaitingRoom, getGameRoom,
     leaveRoom, deleteRoom } = require('./roomsUtils');
 
 function connectSocket(httpServer) {
@@ -25,10 +25,19 @@ function connectSocket(httpServer) {
 
     const updateSearchRooms = () => io.to('rooms waiters').emit('send rooms', getValidRooms());
     
-    const updateMembersInWaitingRooms = () => {
-      socket.rooms.forEach(roomId => {
-        if(hasRoom(roomId)) io.to(roomId).emit('update room members', getRoomForClient(roomId));
-      });
+    const updateSearchAndWaitingRooms = async () => {
+      for (let roomId of socket.rooms) {
+        let roomForClient;
+        const room = getRoom(roomId);
+        if(room) {
+          if(room && room.isRunning)
+            roomForClient = getGameRoom(roomId);
+          else
+            roomForClient = await getWaitingRoom(roomId);
+
+          io.to(roomId).emit('update room members', roomForClient);
+        }
+      }
     }
 
     socket.on('create room', async data => {
@@ -40,7 +49,7 @@ function connectSocket(httpServer) {
       socket.emit('confirm create room', newRoom.id);
 
       updateSearchRooms();
-      updateMembersInWaitingRooms();
+      await updateSearchAndWaitingRooms();
     });
 
 
@@ -58,7 +67,7 @@ function connectSocket(httpServer) {
       socket.emit('confirm join to room', {roomId: room.id, text: room.text, keyboardLayout: keyboardLayout.layout});
 
       updateSearchRooms();
-      updateMembersInWaitingRooms();
+      await updateSearchAndWaitingRooms();
     });
 
 
@@ -114,28 +123,28 @@ function connectSocket(httpServer) {
           socket.emit('kick user'); 
       }
 
-      updateMembersInWaitingRooms();
+      await updateSearchAndWaitingRooms();
     });
 
 
-    socket.on('request members progress', roomId => {
+    socket.on('request members progress', async roomId => {
       socket.to(roomId).emit('response members progress', getRoomForClient(roomId));
     });
 
   
-    socket.on('leave room', ({userId, roomId}) => {
+    socket.on('leave room', async ({userId, roomId}) => {
       const newOwner = leaveRoom({userId, roomId});
       if(newOwner) 
         io.to(newOwner.socket).emit('set room owner');
 
       
       updateSearchRooms();
-      updateMembersInWaitingRooms();
+      await updateSearchAndWaitingRooms();
     });
 
 
 
-    socket.on('disconnecting', reason => {
+    socket.on('disconnecting', async reason => {
       console.log('disconnecting', socket.rooms, socket.id);
       const userRooms = [...socket.rooms].filter(room => room !== socket.id);
 
@@ -156,7 +165,7 @@ function connectSocket(httpServer) {
       });
 
       updateSearchRooms();  
-      updateMembersInWaitingRooms();
+      await updateSearchAndWaitingRooms();
     });
   });
 }

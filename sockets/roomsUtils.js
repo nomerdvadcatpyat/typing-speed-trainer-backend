@@ -9,11 +9,27 @@ let rooms = new Map();
 
 exports.getRoom = roomId => rooms.get(roomId);
 
-exports.getRoomForClient = roomId => rooms.get(roomId).members.map((member) => ({
+exports.getGameRoom = roomId => rooms.get(roomId).members.map((member) => ({
   userName: member.userName,
   inputText: member.inputText,
   isRoomOwner: member.isRoomOwner
 }));
+
+
+exports.getWaitingRoom = async roomId => await Promise.all(
+  rooms.get(roomId).members.map(member => new Promise((res, rej) => {
+    console.log(member.id);
+    User.findById(member.id)
+        .then(user => res({
+          userName: user.login,
+          points: user.points,
+          averageSpeed: Math.round(user.averageSpeed),
+          gamesCount: user.gamesCount,
+          isRoomOwner: member.isRoomOwner
+        }))
+        .catch(err => rej(err));
+  }))
+);
 
 exports.hasRoom = roomId => rooms.has(roomId);
 
