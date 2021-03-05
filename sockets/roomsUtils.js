@@ -15,7 +15,8 @@ exports.getRoom = roomId => rooms.get(roomId);
 exports.getGameRoom = roomId => rooms.get(roomId).members.map((member) => ({
   userName: member.userName,
   inputText: member.inputText,
-  isRoomOwner: member.isRoomOwner
+  isRoomOwner: member.isRoomOwner,
+  isLeave: member.isLeave
 }));
 
 exports.getWaitingRoomMembers = async roomId => {
@@ -67,7 +68,10 @@ exports.hasRoom = roomId => rooms.has(roomId);
 
 exports.setRoom = ({roomId, data}) => rooms.set(roomId, data); 
 
-exports.deleteRoom = roomId => rooms.delete(roomId);
+exports.deleteRoom = roomId => {
+  console.log('delete room', roomId);
+  rooms.delete(roomId);
+}
 
 exports.getValidRooms = () => [...rooms.values()].filter(room => !(room.isSingle ||
                                                                   room.isRunning || 
@@ -153,8 +157,16 @@ exports.leaveRoom = ({userId, roomId}) => {
 
   const userRoom = rooms.get(roomId);
   const user = userRoom.members.find(groupMember => groupMember.id === userId);
-  userRoom.members = userRoom.members.filter(groupMember => groupMember.id !== userId);
-  if(userRoom.members.length === 0) rooms.delete(roomId);
+  if(userRoom.isRunning) {
+    userRoom.members.forEach(member => {
+      if(member.id === user.id) {
+        member.isLeave = true;
+      }
+    })
+  }
+  else userRoom.members = userRoom.members.filter(groupMember => groupMember.id !== userId);
+
+  if(userRoom.members.length === 0 || !userRoom.members.find(member => !member.isLeave)) rooms.delete(roomId);
   else {
     if(user.isRoomOwner)
       return this.setNewRoomOwner(userRoom);

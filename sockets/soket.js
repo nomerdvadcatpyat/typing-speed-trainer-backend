@@ -32,8 +32,11 @@ function connectSocket(httpServer) {
         let roomForClient;
         const room = getRoom(roomId);
         if(room) {
-          if(room && room.isRunning)
-            roomForClient = getGameRoom(roomId);
+          if(room && room.isRunning) {
+            const gameRoom = getGameRoom(roomId);
+            console.log('get game room', gameRoom)
+            roomForClient = gameRoom;
+          }
           else
             roomForClient = await getWaitingRoomMembers(roomId);
 
@@ -162,8 +165,16 @@ function connectSocket(httpServer) {
         const room = getRoom(userRoomId);
         if(room) {
           const user = room.members.find(member => member.socket === socket.id);
-          room.members = room.members.filter(member => member.socket !== socket.id);
-          if(room.members.length === 0) deleteRoom(userRoomId);
+          if(room.isRunning) {
+            room.members.forEach(member => {
+              if(member.socket === user.socket) {
+                member.isLeave = true;
+              }
+            })
+          }
+          else room.members = room.members.filter(member => member.socket !== socket.id);
+          
+          if(room.members.length === 0 || !room.members.find(member => !member.isLeave)) deleteRoom(userRoomId);
           else {
             if(user.isRoomOwner) {
               const newOwner = setNewRoomOwner(room);
