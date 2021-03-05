@@ -1,9 +1,11 @@
 const GameSession = require('../models/gameSession');
 const Keyboard = require('../models/keyboard');
-const { getRoom, hasRoom, getRoomForClient,
+const Language = require('../models/language');
+
+const { getRoom, hasRoom, getRoomForClient, getWaitingRoomMembers, 
     setRoom, getValidRooms,
     createRoom, joinToRoom, 
-    updateRoom, setNewRoomOwner, 
+    updateRoom, setNewRoomOwner, getWaitingRoomFullInfo, getGameRoom,
     leaveRoom, deleteRoom } = require('./roomsUtils');
 
 function connectSocket(httpServer) {
@@ -25,22 +27,40 @@ function connectSocket(httpServer) {
 
     const updateSearchRooms = () => io.to('rooms waiters').emit('send rooms', getValidRooms());
     
-    const updateMembersInWaitingRooms = () => {
-      socket.rooms.forEach(roomId => {
-        if(hasRoom(roomId)) io.to(roomId).emit('update room members', getRoomForClient(roomId));
-      });
+    const updateGameAndWaitingRooms = async () => {
+      for (let roomId of socket.rooms) {
+        let roomForClient;
+        const room = getRoom(roomId);
+        if(room) {
+          if(room && room.isRunning) {
+            const gameRoom = getGameRoom(roomId);
+            console.log('get game room', gameRoom)
+            roomForClient = gameRoom;
+          }
+          else
+            roomForClient = await getWaitingRoomMembers(roomId);
+
+          io.to(roomId).emit('update room', roomForClient);
+        }
+      }
     }
 
     socket.on('create room', async data => {
       socket.leave('rooms waiters');
 
+      console.log('create room', data);
+
       const newRoom = await createRoom({...data, socketId: socket.id});
+      const roomForClient = await getWaitingRoomFullInfo(newRoom.id);
 
       socket.join(newRoom.id);
-      socket.emit('confirm create room', newRoom.id);
+
+      console.log('roomForClient', roomForClient);
+
+      socket.emit('confirm create room', roomForClient);
 
       updateSearchRooms();
-      updateMembersInWaitingRooms();
+      await updateGameAndWaitingRooms();
     });
 
 
@@ -54,11 +74,12 @@ function connectSocket(httpServer) {
       
       const room = getRoom(roomId);
       socket.join(room.id);
-      const keyboardLayout = await Keyboard.findOne({ language: room.textLang });
-      socket.emit('confirm join to room', {roomId: room.id, text: room.text, keyboardLayout: keyboardLayout.layout});
+
+      const roomForClient = await getWaitingRoomFullInfo(room.id);
+      socket.emit('confirm join to room', roomForClient);
 
       updateSearchRooms();
-      updateMembersInWaitingRooms();
+      await updateGameAndWaitingRooms();
     });
 
 
@@ -92,10 +113,11 @@ function connectSocket(httpServer) {
     socket.on('start single game', async data => {
       console.log('start single game', data);
 
-      const newRoom = await createRoom({...data, socketId: socket.id });
+      const newRoom = await createRoom({...data, socketId: socket.id});
+      const roomForClient = await getWaitingRoomFullInfo(newRoom.id);
 
       socket.join(newRoom.id);
-      socket.emit('confirm create room', newRoom.id);
+      socket.emit('confirm create room', roomForClient);
 
       startGame(newRoom, true);
     });
@@ -114,28 +136,28 @@ function connectSocket(httpServer) {
           socket.emit('kick user'); 
       }
 
-      updateMembersInWaitingRooms();
+      await updateGameAndWaitingRooms();
     });
 
 
-    socket.on('request members progress', roomId => {
-      socket.to(roomId).emit('response members progress', getRoomForClient(roomId));
+    socket.on('request members progress', async roomId => {
+      socket.to(roomId).emit('response members progress', getGameRoom(roomId));
     });
 
   
-    socket.on('leave room', ({userId, roomId}) => {
+    socket.on('leave room', async ({userId, roomId}) => {
       const newOwner = leaveRoom({userId, roomId});
       if(newOwner) 
         io.to(newOwner.socket).emit('set room owner');
 
       
       updateSearchRooms();
-      updateMembersInWaitingRooms();
+      await updateGameAndWaitingRooms();
     });
 
 
 
-    socket.on('disconnecting', reason => {
+    socket.on('disconnecting', async reason => {
       console.log('disconnecting', socket.rooms, socket.id);
       const userRooms = [...socket.rooms].filter(room => room !== socket.id);
 
@@ -143,8 +165,16 @@ function connectSocket(httpServer) {
         const room = getRoom(userRoomId);
         if(room) {
           const user = room.members.find(member => member.socket === socket.id);
-          room.members = room.members.filter(member => member.socket !== socket.id);
-          if(room.members.length === 0) deleteRoom(userRoomId);
+          if(room.isRunning) {
+            room.members.forEach(member => {
+              if(member.socket === user.socket) {
+                member.isLeave = true;
+              }
+            })
+          }
+          else room.members = room.members.filter(member => member.socket !== socket.id);
+          
+          if(room.members.length === 0 || !room.members.find(member => !member.isLeave)) deleteRoom(userRoomId);
           else {
             if(user.isRoomOwner) {
               const newOwner = setNewRoomOwner(room);
@@ -156,7 +186,7 @@ function connectSocket(httpServer) {
       });
 
       updateSearchRooms();  
-      updateMembersInWaitingRooms();
+      await updateGameAndWaitingRooms();
     });
   });
 }

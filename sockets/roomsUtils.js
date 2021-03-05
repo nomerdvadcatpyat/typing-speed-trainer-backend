@@ -1,37 +1,103 @@
 const { v4: uuidv4 } = require('uuid');
 const UserTime = require('../models/userTime');
 const User = require('../models/user');
+const Text = require('../models/text');
+const Language = require('../models/language');
 const RoomMember = require('./RoomMember');
 const Room = require('./Room');
+const Keyboard = require('../models/keyboard');
 const GameSession = require('../models/gameSession');
 
 let rooms = new Map();
 
 exports.getRoom = roomId => rooms.get(roomId);
 
-exports.getRoomForClient = roomId => rooms.get(roomId).members.map((member) => ({
+exports.getGameRoom = roomId => rooms.get(roomId).members.map((member) => ({
   userName: member.userName,
   inputText: member.inputText,
-  isRoomOwner: member.isRoomOwner
+  isRoomOwner: member.isRoomOwner,
+  isLeave: member.isLeave
 }));
+
+exports.getWaitingRoomMembers = async roomId => {
+  const room = rooms.get(roomId);
+
+  const members = await Promise.all(
+    room.members.map(member => new Promise((res, rej) => {
+      User.findById(member.id)
+          .then(user => res({
+            userName: user.login,
+            points: user.points,
+            averageSpeed: Math.round(user.averageSpeed),
+            gamesCount: user.gamesCount,
+            isRoomOwner: member.isRoomOwner
+          }))
+          .catch(err => rej(err));
+    }))
+  );
+
+  return members;
+}
+
+
+exports.getWaitingRoomFullInfo = async roomId => {
+  const room = rooms.get(roomId);
+
+  const members = await this.getWaitingRoomMembers(roomId);
+
+  const language = await Language.findOne({ name: room.textLang });
+  const keyboardLayout = await Keyboard.findOne({ language: language._id });
+
+  const roomInfo = {
+    roomId: room.id,
+    textTitle: room.textTitle,
+    text: room.text,
+    language: room.textLang,
+    maxMembersCount: room.maxMembers,
+    keyboardLayout: keyboardLayout.layout
+  }
+
+  return ({
+    roomInfo,
+    members
+  });
+}
+
 
 exports.hasRoom = roomId => rooms.has(roomId);
 
 exports.setRoom = ({roomId, data}) => rooms.set(roomId, data); 
 
-exports.deleteRoom = roomId => rooms.delete(roomId);
+exports.deleteRoom = roomId => {
+  console.log('delete room', roomId);
+  rooms.delete(roomId);
+}
 
 exports.getValidRooms = () => [...rooms.values()].filter(room => !(room.isSingle ||
                                                                   room.isRunning || 
                                                                   room.members.length === +room.maxMembers));
 
 
-exports.createRoom = async data => {
-  const ownerInDb = await User.findById(data.userId);
-  const owner = new RoomMember(data.userId, data.socketId, ownerInDb.login);
+exports.createRoom = async ({ textTitle, length, maxMembersCount, userId, socketId }) => {
+  const ownerInDb = await User.findById(userId);
+  const owner = new RoomMember(userId, socketId, ownerInDb.login);
   owner.isRoomOwner = true;
   const roomId = uuidv4();
-  const newRoom = new Room(roomId, owner, data.textTitle, data.textLang, data.text, data.usersCount, data.usersCount === 1);
+
+  const data = await Text.findOne({ title: textTitle});
+  const text = data.text.substr(0, +length).replace(/\s+/g, ' ');
+  const textLang = await Language.findById(data.language);
+
+  const newRoom = new Room(
+    roomId,
+    owner, 
+    textTitle, 
+    textLang.name, 
+    text, 
+    maxMembersCount, 
+    maxMembersCount === 1
+  );
+  
   rooms.set(newRoom.id, newRoom);
   return newRoom;
 }       
@@ -91,11 +157,19 @@ exports.leaveRoom = ({userId, roomId}) => {
 
   const userRoom = rooms.get(roomId);
   const user = userRoom.members.find(groupMember => groupMember.id === userId);
-  userRoom.members = userRoom.members.filter(groupMember => groupMember.id !== userId);
-  if(userRoom.members.length === 0) rooms.delete(roomId);
+  if(userRoom.isRunning) {
+    userRoom.members.forEach(member => {
+      if(member.id === user.id) {
+        member.isLeave = true;
+      }
+    })
+  }
+  else userRoom.members = userRoom.members.filter(groupMember => groupMember.id !== userId);
+
+  if(userRoom.members.length === 0 || !userRoom.members.find(member => !member.isLeave)) rooms.delete(roomId);
   else {
     if(user.isRoomOwner)
-      return setNewRoomOwner(userRoom);
+      return this.setNewRoomOwner(userRoom);
     rooms.set(roomId, userRoom);
   }
 

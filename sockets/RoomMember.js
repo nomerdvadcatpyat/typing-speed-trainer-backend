@@ -5,6 +5,7 @@ class RoomMember {
     this.userName = userName;
     this.socket = socket;
     this.inputText = '';
+    this.isLeave = false;
 
     this.startTime = null;
     this.lastUpdateTime = null;
