@@ -129,8 +129,13 @@ function connectSocket(httpServer) {
       const res = await updateRoom({roomId, userId, inputText});
       if(res) {
         if(res.message === 'end') {
+          console.log('set end state');
           const member = res.member;
-          socket.emit('set end time', member.endTime - member.startTime); 
+          socket.emit('set end data', {endTime: (member.endTime - member.startTime) / 1000, 
+            points: member.points, 
+            place: member.place, 
+            averageSpeed: Math.round(member.averageSpeed)
+          }); 
         }
         else if(res.message === 'cheating')
           socket.emit('kick user'); 

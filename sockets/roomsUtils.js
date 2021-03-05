@@ -186,6 +186,10 @@ async function setEndTime({member, room}) {
   const timeDiff = member.endTime - member.startTime;
   const averageSpeedPerMinute = room.text.length / (timeDiff / (1000 * 60));
 
+  member.place = place;
+  member.points = points;
+  member.averageSpeed = averageSpeedPerMinute;
+
   await UserTime.create({ 
     gameSession,
      user, 
@@ -210,25 +214,27 @@ function isCheating(oldInputText, newInput) {
 }
 
 function getPlace(room, member) {
- let place = 1;
- room.members.forEach(otherMember => {
-   if(member === otherMember) 
-     return;
-   if(otherMember.endTime && otherMember.endTime < member.endTime)
-     ++place 
- });
+  if(room.isSingle) return {place: 1, points: 0}
 
- switch(place) {
-   case 1:
-     return {place, points: 20};
+  let place = 1;
+  room.members.forEach(otherMember => {
+    if(member === otherMember) 
+      return;
+    if(otherMember.endTime && otherMember.endTime < member.endTime)
+      ++place 
+  });
 
-   case 2:
-     return {place, points: 15};
+  switch(place) {
+    case 1:
+      return {place, points: 20};
 
-   case 3:
-     return {place, points: 10};    
-   
-   default:
-     return {place, points: 5};  
- }
+    case 2:
+      return {place, points: 15};
+
+    case 3:
+      return {place, points: 10};    
+    
+    default:
+      return {place, points: 5};  
+  }
 }

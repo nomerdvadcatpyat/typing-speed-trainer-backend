@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
       break;
     }
     case 'averageSpeed': {
-      resJson = mappedUsers.sort((u1, u2) => u1.averageSpeed > u2.averageSpeed ? 1 : -1);
+      resJson = mappedUsers.sort((u1, u2) => u1.averageSpeed < u2.averageSpeed ? 1 : -1);
       console.log('switch as')
       break;
     }
