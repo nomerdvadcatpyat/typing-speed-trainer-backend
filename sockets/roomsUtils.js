@@ -69,7 +69,6 @@ exports.hasRoom = roomId => rooms.has(roomId);
 exports.setRoom = ({roomId, data}) => rooms.set(roomId, data); 
 
 exports.deleteRoom = roomId => {
-  console.log('delete room', roomId);
   rooms.delete(roomId);
 }
 
@@ -144,10 +143,6 @@ exports.joinToRoom = async ({roomId, userId, socketId}) => {
 
 exports.updateRoom = async ({roomId, userId, inputText}) => {
   const room = rooms.get(roomId);
-  if(!room) {
-    console.log('no such room');
-    return;
-  }
   const member = room
                 .members
                 .find(groupMember => groupMember.id === userId);
@@ -172,7 +167,6 @@ exports.setNewRoomOwner = room => {
 
 
 exports.leaveRoom = ({userId, roomId}) => {
-  console.log('leave room before', userId, roomId, rooms);
 
   const userRoom = rooms.get(roomId);
   const user = userRoom.members.find(groupMember => groupMember.id === userId);
@@ -191,8 +185,6 @@ exports.leaveRoom = ({userId, roomId}) => {
       return this.setNewRoomOwner(userRoom);
     rooms.set(roomId, userRoom);
   }
-
-  console.log('leave room after', rooms);
 }
 
 
