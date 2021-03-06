@@ -57,5 +57,8 @@ const server = http.createServer(app);
 
 connectSocket(server);
 
-server.listen(process.env.PORT || 3001);
+const port = process.env.PORT || '3001';
+server.listen(port, () => {
+  console.log('server listen on ', port);
+});
 
