@@ -53,7 +53,7 @@ app.use('/api/rating', ratingRouter);
 app.use('/api/profile', profileRouter);
 
 
-var server = http.createServer(app);
+const server = http.createServer(app);
 
 connectSocket(server);
 
