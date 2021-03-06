@@ -38,7 +38,6 @@ router.get('/', async (req, res) => {
 
 
 function get123PlacesCount(userSessions) {
-  console.log(userSessions);
   let first = 0, second = 0, third = 0;
   for(let session of userSessions) {
     switch(session.place) {
@@ -55,8 +54,6 @@ function get123PlacesCount(userSessions) {
         break;
     }
   }
-
-  console.log(first, second, third);
 
   return {first, second, third};
 }

@@ -12,14 +12,11 @@ router.post('/registration', validateRegistrationMiddleware,
     const candidate = await User.findOne({login})
 
     if(candidate) {
-      console.log('is candidate', candidate);
       return res.status(400).json({error: `User with login ${login} already exist.`});
     }
 
     const hashPassword = await bcrypt.hash(password, 4);
     const user = await User.create({login, password: hashPassword});
-
-    console.log(user);
 
     req.logIn(user, err => {
       if(err) throw err;
@@ -44,7 +41,6 @@ router.post('/registration', validateRegistrationMiddleware,
 router.post('/login', async (req, res, next) => {
   try {
     passport.authenticate("local", (err, user, info) => {
-      console.log('user', user);
       if(err) throw err;
       if (!user)
         return res.status(404).json({error: "Wrong login or password"});
@@ -62,7 +58,7 @@ router.post('/login', async (req, res, next) => {
     })(req, res, next);
 
   } catch (e) {
-    console.log(e)
+    console.log(e);
     res.json({message: 'Server Error'});
   }
 });
@@ -75,7 +71,6 @@ router.get('/logout', (req, res) => {
 
 router.get('/auth', (req, res, next) => {
   const user = req.user;
-  console.log('auth', req.user);
   user ? res.json({ok: true, user}) : res.json({ ok: false });
 });
 

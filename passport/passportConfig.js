@@ -10,7 +10,6 @@ module.exports = function(passport) {
     passwordField: 'password'
   },
   (login, password, done) => {
-    console.log(login, password);
     User.findOne({ login: login }, (err, user) => {
       if(err) throw err;
       if(!user) return done(null, false);

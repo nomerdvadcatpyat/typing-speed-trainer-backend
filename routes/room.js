@@ -13,8 +13,6 @@ router.get('/selectTextPageData', async (req, res) => {
   const response = await Text.find();
   const textTitles = response.map(doc => ({ value: doc.title, title: doc.title }));
 
-  console.log(textTitles);
-
   res.json({
     textTitles,
     lengths
