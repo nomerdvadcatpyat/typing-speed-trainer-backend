@@ -25,10 +25,16 @@ function connectSocket(httpServer) {
       socket.emit('send rooms', getValidRooms());
     });
 
+
     const updateSearchRooms = () => io.to('rooms waiters').emit('send rooms', getValidRooms());
     
+
     const updateGameAndWaitingRooms = async () => {
+      console.log('update socket rooms ', socket.rooms);
+
       for (let roomId of socket.rooms) {
+        if(roomId === socket.id) continue;
+
         let roomForClient;
         const room = getRoom(roomId);
         if(room) {
@@ -45,6 +51,7 @@ function connectSocket(httpServer) {
       }
     }
 
+
     socket.on('create room', async data => {
       socket.leave('rooms waiters');
 
@@ -54,8 +61,6 @@ function connectSocket(httpServer) {
       const roomForClient = await getWaitingRoomFullInfo(newRoom.id);
 
       socket.join(newRoom.id);
-
-      console.log('roomForClient', roomForClient);
 
       socket.emit('confirm create room', roomForClient);
 
@@ -70,7 +75,7 @@ function connectSocket(httpServer) {
 
       const error = await joinToRoom({ roomId, userId, socketId: socket.id });
       if(error) 
-        return socket.emit('reject join to room', error.message);
+        return socket.emit('set room error', error);
       
       const room = getRoom(roomId);
       socket.join(room.id);
@@ -92,6 +97,8 @@ function connectSocket(httpServer) {
 
       io.to(room.id).emit('set prepare state');
       setTimeout(() => {
+        console.log(room.id);
+        console.log(socket.rooms);
         io.to(room.id).emit('set typing state');
         room.members.forEach(member => member.startTime = new Date());
         room.isRunning = true;
@@ -103,7 +110,10 @@ function connectSocket(httpServer) {
       const userRoom = getRoom(roomId);
       const owner = userRoom.members.find(member => member.isRoomOwner);
       if(owner.id !== userId)
-        return socket.emit('reject start game', 'Вы не владелец комнаты');
+        return socket.emit('set room error', {
+          title: 'Вы не владелец комнаты', 
+          message: 'Вы были исключены потому, что изменили код страницы и попытались начать игру, не являясь владельцем комнаты'
+        });
 
       const isSingle = userRoom.members.length === 1;
       startGame(userRoom, isSingle);
@@ -111,6 +121,7 @@ function connectSocket(httpServer) {
 
     
     socket.on('start single game', async data => {
+      socket.leave('rooms waiters');
       console.log('start single game', data);
 
       const newRoom = await createRoom({...data, socketId: socket.id});
@@ -123,21 +134,36 @@ function connectSocket(httpServer) {
     });
 
 
+
     socket.on('update time', async ({ roomId,  userId, inputText }) => {
       console.log('update time', roomId, userId, inputText, socket.rooms);
 
       const res = await updateRoom({roomId, userId, inputText});
       if(res) {
+        console.log(res.message);
+
         if(res.message === 'end') {
+          console.log('set end state');
           const member = res.member;
-          socket.emit('set end time', member.endTime - member.startTime); 
+          socket.emit('set end data', {endTime: (member.endTime - member.startTime) / 1000, 
+            points: member.points, 
+            place: member.place, 
+            averageSpeed: Math.round(member.averageSpeed)
+          }); 
         }
-        else if(res.message === 'cheating')
-          socket.emit('kick user'); 
+        else if(res.message === 'cheating') {
+          socket.emit('set room error', { 
+            title: 'Вы были исключены', 
+            message: 'Возможно вы попытались вставить текст в поле для ввода или совершить какие-либо другие обманные действия.' 
+          }); 
+          return;
+        }
+
       }
 
       await updateGameAndWaitingRooms();
     });
+
 
 
     socket.on('request members progress', async roomId => {
@@ -146,15 +172,17 @@ function connectSocket(httpServer) {
 
   
     socket.on('leave room', async ({userId, roomId}) => {
+      console.log('leave room', userId, roomId);
+      socket.leave(roomId);
+      
       const newOwner = leaveRoom({userId, roomId});
       if(newOwner) 
         io.to(newOwner.socket).emit('set room owner');
 
-      
+
       updateSearchRooms();
       await updateGameAndWaitingRooms();
     });
-
 
 
     socket.on('disconnecting', async reason => {
