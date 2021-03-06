@@ -18,8 +18,6 @@ function connectSocket(httpServer) {
 
 
   io.on('connection', socket => {
-    console.log(socket.id);
-
     socket.on('get rooms', () => {
       socket.join('rooms waiters');
       socket.emit('send rooms', getValidRooms());
@@ -30,8 +28,6 @@ function connectSocket(httpServer) {
     
 
     const updateGameAndWaitingRooms = async () => {
-      console.log('update socket rooms ', socket.rooms);
-
       for (let roomId of socket.rooms) {
         if(roomId === socket.id) continue;
 
@@ -40,7 +36,6 @@ function connectSocket(httpServer) {
         if(room) {
           if(room && room.isRunning) {
             const gameRoom = getGameRoom(roomId);
-            console.log('get game room', gameRoom)
             roomForClient = gameRoom;
           }
           else
@@ -54,9 +49,6 @@ function connectSocket(httpServer) {
 
     socket.on('create room', async data => {
       socket.leave('rooms waiters');
-
-      console.log('create room', data);
-
       const newRoom = await createRoom({...data, socketId: socket.id});
       const roomForClient = await getWaitingRoomFullInfo(newRoom.id);
 
@@ -97,8 +89,6 @@ function connectSocket(httpServer) {
 
       io.to(room.id).emit('set prepare state');
       setTimeout(() => {
-        console.log(room.id);
-        console.log(socket.rooms);
         io.to(room.id).emit('set typing state');
         room.members.forEach(member => member.startTime = new Date());
         room.isRunning = true;
@@ -122,7 +112,6 @@ function connectSocket(httpServer) {
     
     socket.on('start single game', async data => {
       socket.leave('rooms waiters');
-      console.log('start single game', data);
 
       const newRoom = await createRoom({...data, socketId: socket.id});
       const roomForClient = await getWaitingRoomFullInfo(newRoom.id);
@@ -136,14 +125,9 @@ function connectSocket(httpServer) {
 
 
     socket.on('update time', async ({ roomId,  userId, inputText }) => {
-      console.log('update time', roomId, userId, inputText, socket.rooms);
-
       const res = await updateRoom({roomId, userId, inputText});
       if(res) {
-        console.log(res.message);
-
         if(res.message === 'end') {
-          console.log('set end state');
           const member = res.member;
           socket.emit('set end data', {endTime: (member.endTime - member.startTime) / 1000, 
             points: member.points, 
@@ -158,7 +142,6 @@ function connectSocket(httpServer) {
           }); 
           return;
         }
-
       }
 
       await updateGameAndWaitingRooms();
@@ -172,7 +155,6 @@ function connectSocket(httpServer) {
 
   
     socket.on('leave room', async ({userId, roomId}) => {
-      console.log('leave room', userId, roomId);
       socket.leave(roomId);
       
       const newOwner = leaveRoom({userId, roomId});
@@ -186,7 +168,6 @@ function connectSocket(httpServer) {
 
 
     socket.on('disconnecting', async reason => {
-      console.log('disconnecting', socket.rooms, socket.id);
       const userRooms = [...socket.rooms].filter(room => room !== socket.id);
 
       userRooms.forEach(userRoomId => {
