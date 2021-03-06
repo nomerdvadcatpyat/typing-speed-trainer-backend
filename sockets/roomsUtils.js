@@ -94,8 +94,8 @@ exports.createRoom = async ({ textTitle, length, maxMembersCount, userId, socket
     textTitle, 
     textLang.name, 
     text, 
-    maxMembersCount, 
-    maxMembersCount === 1
+    +maxMembersCount, 
+    +maxMembersCount === 1
   );
   
   rooms.set(newRoom.id, newRoom);
@@ -105,14 +105,28 @@ exports.createRoom = async ({ textTitle, length, maxMembersCount, userId, socket
 
 const getError = ({room, userId}) => {
   if(!room)
-    return { message: 'Такой комнаты не существует' };
+    return { 
+      title: 'Такой комнаты не существует.',
+      message: 'Вы попытались подключиться к комнате, которой не существует.'
+    };
   else if(room.isRunning)
-    return { message: 'Игра уже началась' };
+    return { 
+      title: 'Игра уже началась.',
+      message: 'Не удалось подключиться к комнате, потому что игра в ней уже началась.'
+     };
   else if(room.members.find(member => member.id === userId))
-    return { message: 'Вы уже есть в этой комнате' };
+    return { 
+      title: 'Вы уже есть в этой комнате.',
+      message: 'Вы попытались подключиться к комнате, в которой вы уже находитесь.' 
+    };
   else if(room.members.length >= room.maxMembers) 
-    return { message: 'В комнате максимальное количество игроков' };
+    return { 
+      titile: 'В комнате максимальное количество игроков.',
+      message: 'Вы попытались подключиться к комнате, в которой уже нет места.'
+    };
 }
+
+
 
 exports.joinToRoom = async ({roomId, userId, socketId}) => {
   const userInDb = await User.findById(userId);
@@ -125,6 +139,8 @@ exports.joinToRoom = async ({roomId, userId, socketId}) => {
   room.members.push(new RoomMember(userId, socketId, userInDb.login));
   rooms.set(room.id, room);
 }
+
+
 
 exports.updateRoom = async ({roomId, userId, inputText}) => {
   const room = rooms.get(roomId);
@@ -147,10 +163,13 @@ exports.updateRoom = async ({roomId, userId, inputText}) => {
     return await setEndTime({member, room});
 }
 
+
+
 exports.setNewRoomOwner = room => {
   room.members[0].isRoomOwner = true;
   return room.members[0];
 }
+
 
 exports.leaveRoom = ({userId, roomId}) => {
   console.log('leave room before', userId, roomId, rooms);
@@ -209,9 +228,13 @@ async function setEndTime({member, room}) {
   return {message: 'end', member};
 }
 
+
+
 function isCheating(oldInputText, newInput) {
-  newInput.length - oldInputText.length > 12.5 * 4;
+  return newInput.length - oldInputText.length > 12.5 * 4;
 }
+
+
 
 function getPlace(room, member) {
   if(room.isSingle) return {place: 1, points: 0}
