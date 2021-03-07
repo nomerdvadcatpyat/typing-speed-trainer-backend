@@ -6,7 +6,7 @@ const logger = require('morgan');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo').default;
-
+const connectSocket = require('./sockets/soket');
 
 const authRouter = require('./routes/auth');
 const roomRouter = require('./routes/room');
@@ -55,6 +55,8 @@ app.use('/api/rating', ratingRouter);
 app.use('/api/profile', profileRouter);
 
 
-module.exports = app;
+const PORT = process.env.PORT || 3001;
 
+const server = app.listen(PORT, () => console.log(`Server start on ${PORT}`));
 
+connectSocket(server);
