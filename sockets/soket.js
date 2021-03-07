@@ -1,8 +1,5 @@
 const GameSession = require('../models/gameSession');
-const Keyboard = require('../models/keyboard');
-const Language = require('../models/language');
-
-const { getRoom, hasRoom, getRoomForClient, getWaitingRoomMembers, 
+const { getRoom, getWaitingRoomMembers, 
     setRoom, getValidRooms,
     createRoom, joinToRoom, 
     updateRoom, setNewRoomOwner, getWaitingRoomFullInfo, getGameRoom,
@@ -11,8 +8,8 @@ const { getRoom, hasRoom, getRoomForClient, getWaitingRoomMembers,
 function connectSocket(httpServer) {
   const io = require('socket.io')(httpServer, {
     cors: {
-      Origin: '*',
-      Methods: ["GET, PUT, PATCH, POST, DELETE"],
+      origin: process.env.CLIENT_URL,
+      credentials: true
     }
   });
 
@@ -51,7 +48,6 @@ function connectSocket(httpServer) {
       socket.leave('rooms waiters');
       const newRoom = await createRoom({...data, socketId: socket.id});
       const roomForClient = await getWaitingRoomFullInfo(newRoom.id);
-
       socket.join(newRoom.id);
 
       socket.emit('confirm create room', roomForClient);
@@ -64,7 +60,6 @@ function connectSocket(httpServer) {
 
     socket.on('join to room', async ({roomId, userId}) => {
       socket.leave('rooms waiters');
-
       const error = await joinToRoom({ roomId, userId, socketId: socket.id });
       if(error) 
         return socket.emit('set room error', error);
@@ -86,7 +81,6 @@ function connectSocket(httpServer) {
       const gameSession = await GameSession.findOne({ id: room.id });
       if(!gameSession) 
         GameSession.create({ id: room.id, textTitle: room.textTitle, length: room.text.length, isSingle: isSingle });
-
       io.to(room.id).emit('set prepare state');
       setTimeout(() => {
         io.to(room.id).emit('set typing state');

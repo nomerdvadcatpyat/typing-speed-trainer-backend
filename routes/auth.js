@@ -71,6 +71,7 @@ router.get('/logout', (req, res) => {
 
 router.get('/auth', (req, res, next) => {
   const user = req.user;
+  console.log(req.user);
   user ? res.json({ok: true, user}) : res.json({ ok: false });
 });
 

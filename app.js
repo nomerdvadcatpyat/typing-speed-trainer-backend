@@ -6,7 +6,6 @@ const logger = require('morgan');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo').default;
-var http = require('http');
 const connectSocket = require('./sockets/soket');
 
 const authRouter = require('./routes/auth');
@@ -53,12 +52,8 @@ app.use('/api/rating', ratingRouter);
 app.use('/api/profile', profileRouter);
 
 
-const server = http.createServer(app);
+const PORT = process.env.PORT || 3001;
+
+const server = app.listen(PORT, () => console.log(`Server start on ${PORT}`));
 
 connectSocket(server);
-
-const port = process.env.PORT || '3001';
-server.listen(port, () => {
-  console.log('server listen on ', port);
-});
-
