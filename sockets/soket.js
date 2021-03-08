@@ -1,8 +1,5 @@
 const GameSession = require('../models/gameSession');
-const Keyboard = require('../models/keyboard');
-const Language = require('../models/language');
-
-const { getRoom, hasRoom, getRoomForClient, getWaitingRoomMembers, 
+const { getRoom, getWaitingRoomMembers, 
     setRoom, getValidRooms,
     createRoom, joinToRoom, 
     updateRoom, setNewRoomOwner, getWaitingRoomFullInfo, getGameRoom,
@@ -11,15 +8,13 @@ const { getRoom, hasRoom, getRoomForClient, getWaitingRoomMembers,
 function connectSocket(httpServer) {
   const io = require('socket.io')(httpServer, {
     cors: {
-      Origin: '*',
-      Methods: ["GET, PUT, PATCH, POST, DELETE"],
+      origin: process.env.CLIENT_URL,
+      credentials: true
     }
   });
 
 
   io.on('connection', socket => {
-    console.log(socket.id);
-
     socket.on('get rooms', () => {
       socket.join('rooms waiters');
       socket.emit('send rooms', getValidRooms());
@@ -30,8 +25,6 @@ function connectSocket(httpServer) {
     
 
     const updateGameAndWaitingRooms = async () => {
-      console.log('update socket rooms ', socket.rooms);
-
       for (let roomId of socket.rooms) {
         if(roomId === socket.id) continue;
 
@@ -40,7 +33,6 @@ function connectSocket(httpServer) {
         if(room) {
           if(room && room.isRunning) {
             const gameRoom = getGameRoom(roomId);
-            console.log('get game room', gameRoom)
             roomForClient = gameRoom;
           }
           else
@@ -54,12 +46,8 @@ function connectSocket(httpServer) {
 
     socket.on('create room', async data => {
       socket.leave('rooms waiters');
-
-      console.log('create room', data);
-
       const newRoom = await createRoom({...data, socketId: socket.id});
       const roomForClient = await getWaitingRoomFullInfo(newRoom.id);
-
       socket.join(newRoom.id);
 
       socket.emit('confirm create room', roomForClient);
@@ -72,7 +60,6 @@ function connectSocket(httpServer) {
 
     socket.on('join to room', async ({roomId, userId}) => {
       socket.leave('rooms waiters');
-
       const error = await joinToRoom({ roomId, userId, socketId: socket.id });
       if(error) 
         return socket.emit('set room error', error);
@@ -94,11 +81,8 @@ function connectSocket(httpServer) {
       const gameSession = await GameSession.findOne({ id: room.id });
       if(!gameSession) 
         GameSession.create({ id: room.id, textTitle: room.textTitle, length: room.text.length, isSingle: isSingle });
-
       io.to(room.id).emit('set prepare state');
       setTimeout(() => {
-        console.log(room.id);
-        console.log(socket.rooms);
         io.to(room.id).emit('set typing state');
         room.members.forEach(member => member.startTime = new Date());
         room.isRunning = true;
@@ -122,7 +106,6 @@ function connectSocket(httpServer) {
     
     socket.on('start single game', async data => {
       socket.leave('rooms waiters');
-      console.log('start single game', data);
 
       const newRoom = await createRoom({...data, socketId: socket.id});
       const roomForClient = await getWaitingRoomFullInfo(newRoom.id);
@@ -136,14 +119,9 @@ function connectSocket(httpServer) {
 
 
     socket.on('update time', async ({ roomId,  userId, inputText }) => {
-      console.log('update time', roomId, userId, inputText, socket.rooms);
-
       const res = await updateRoom({roomId, userId, inputText});
       if(res) {
-        console.log(res.message);
-
         if(res.message === 'end') {
-          console.log('set end state');
           const member = res.member;
           socket.emit('set end data', {endTime: (member.endTime - member.startTime) / 1000, 
             points: member.points, 
@@ -158,7 +136,6 @@ function connectSocket(httpServer) {
           }); 
           return;
         }
-
       }
 
       await updateGameAndWaitingRooms();
@@ -172,7 +149,6 @@ function connectSocket(httpServer) {
 
   
     socket.on('leave room', async ({userId, roomId}) => {
-      console.log('leave room', userId, roomId);
       socket.leave(roomId);
       
       const newOwner = leaveRoom({userId, roomId});
@@ -186,7 +162,6 @@ function connectSocket(httpServer) {
 
 
     socket.on('disconnecting', async reason => {
-      console.log('disconnecting', socket.rooms, socket.id);
       const userRooms = [...socket.rooms].filter(room => room !== socket.id);
 
       userRooms.forEach(userRoomId => {
