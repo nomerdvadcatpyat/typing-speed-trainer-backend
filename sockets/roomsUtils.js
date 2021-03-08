@@ -19,19 +19,22 @@ exports.getGameRoom = roomId => rooms.get(roomId).members.map((member) => ({
   isLeave: member.isLeave
 }));
 
+
 exports.getWaitingRoomMembers = async roomId => {
   const room = rooms.get(roomId);
 
   const members = await Promise.all(
     room.members.map(member => new Promise((res, rej) => {
       User.findById(member.id)
-          .then(user => res({
-            userName: user.login,
-            points: user.points,
-            averageSpeed: Math.round(user.averageSpeed),
-            gamesCount: user.gamesCount,
-            isRoomOwner: member.isRoomOwner
-          }))
+          .then(user => {
+            res({
+              userName: user.login,
+              points: user.points,
+              averageSpeed: Math.round(user.averageSpeed),
+              gamesCount: user.gamesCount,
+              isRoomOwner: member.isRoomOwner
+            })
+          })
           .catch(err => rej(err));
     }))
   );
@@ -79,7 +82,7 @@ exports.getValidRooms = () => [...rooms.values()].filter(room => !(room.isSingle
 
 exports.createRoom = async ({ textTitle, length, maxMembersCount, userId, socketId }) => {
   const ownerInDb = await User.findById(userId);
-  const owner = new RoomMember(userId, socketId, ownerInDb.login);
+  const owner = new RoomMember({id: userId, socket: socketId, userName: ownerInDb.login});
   owner.isRoomOwner = true;
   const roomId = uuidv4();
 
@@ -87,15 +90,15 @@ exports.createRoom = async ({ textTitle, length, maxMembersCount, userId, socket
   const text = data.text.substr(0, +length).replace(/\s+/g, ' ');
   const textLang = await Language.findById(data.language);
 
-  const newRoom = new Room(
-    roomId,
+  const newRoom = new Room({
+    id: roomId,
     owner, 
     textTitle, 
-    textLang.name, 
+    textLang: textLang.name, 
     text, 
-    +maxMembersCount, 
-    +maxMembersCount === 1
-  );
+    maxMembers: +maxMembersCount, 
+    isSingle: +maxMembersCount === 1
+  });
   
   rooms.set(newRoom.id, newRoom);
   return newRoom;
@@ -135,7 +138,7 @@ exports.joinToRoom = async ({roomId, userId, socketId}) => {
   if(error) 
     return error;
 
-  room.members.push(new RoomMember(userId, socketId, userInDb.login));
+  room.members.push(new RoomMember({ id: userId, socket: socketId, userName: userInDb.login}));
   rooms.set(room.id, room);
 }
 
@@ -167,13 +170,15 @@ exports.setNewRoomOwner = room => {
 
 
 exports.leaveRoom = ({userId, roomId}) => {
-
   const userRoom = rooms.get(roomId);
   const user = userRoom.members.find(groupMember => groupMember.id === userId);
+  const isRoomOwner = user.isRoomOwner;
+
   if(userRoom.isRunning) {
     userRoom.members.forEach(member => {
       if(member.id === user.id) {
         member.isLeave = true;
+        member.isRoomOwner = false;
       }
     })
   }
@@ -181,9 +186,14 @@ exports.leaveRoom = ({userId, roomId}) => {
 
   if(userRoom.members.length === 0 || !userRoom.members.find(member => !member.isLeave)) rooms.delete(roomId);
   else {
-    if(user.isRoomOwner)
-      return this.setNewRoomOwner(userRoom);
+    let newRoomOwner;
+    if(isRoomOwner) 
+      newRoomOwner = this.setNewRoomOwner(userRoom);
+
     rooms.set(roomId, userRoom);
+    rooms.forEach(room => console.log(room.members));
+
+    return newRoomOwner;
   }
 }
 

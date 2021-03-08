@@ -1,5 +1,5 @@
 class RoomMember {
-  constructor(id, socket, userName) {
+  constructor({id, socket, userName}) {
     this.id = id;
     this.isRoomOwner = false;
     this.userName = userName;

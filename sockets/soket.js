@@ -149,8 +149,6 @@ function connectSocket(httpServer) {
 
   
     socket.on('leave room', async ({userId, roomId}) => {
-      socket.leave(roomId);
-      
       const newOwner = leaveRoom({userId, roomId});
       if(newOwner) 
         io.to(newOwner.socket).emit('set room owner');
@@ -158,6 +156,8 @@ function connectSocket(httpServer) {
 
       updateSearchRooms();
       await updateGameAndWaitingRooms();
+
+      socket.leave(roomId);
     });
 
 

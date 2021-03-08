@@ -1,5 +1,5 @@
 class Room {
-  constructor(id, owner, textTitle, textLang, text, maxMembers, isSingle) {
+  constructor({id, owner, textTitle, textLang, text, maxMembers, isSingle}) {
     this.id = id;
     this.textTitle = textTitle;
     this.textLang = textLang;
