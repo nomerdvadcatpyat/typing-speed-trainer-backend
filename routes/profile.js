@@ -4,12 +4,12 @@ const User = require('../models/user');
 const userTime = require('../models/userTime');
 
 const options = {
-  year: 'numeric',
+  // year: 'numeric',
   month: 'numeric',
   day: 'numeric',
   hour: 'numeric',
   minute: 'numeric',
-  second: 'numeric'
+  // second: 'numeric'
 };
 
 router.get('/', async (req, res) => {
